@@ -1,21 +1,20 @@
 import VagaDAO from "../Persistencia/vagaDAO.js";
-import Candidato from "./canditato.js";
 
 export default class Vaga {
-    #codigo;
-    #titulo;
-    #descricao;
-    #localizacao;
-    #salario;
 
-    constructor(codigo = 0, titulo = '', descricao = '', localizacao = '', salario = 0.0) {
+    #codigo;
+    #cargo;
+    #salario;
+    #cidade;
+
+    constructor(codigo = 0, cargo = '', salario = 0.0, cidade = '') {
         this.#codigo = codigo;
-        this.#titulo = titulo;
-        this.#descricao = descricao;
-        this.#localizacao = localizacao;
+        this.#cargo = cargo;
         this.#salario = salario;
+        this.#cidade = cidade;
     }
 
+    // Getters e Setters
     get codigo() {
         return this.#codigo;
     }
@@ -24,28 +23,12 @@ export default class Vaga {
         this.#codigo = novoCodigo;
     }
 
-    get titulo() {
-        return this.#titulo;
+    get cargo() {
+        return this.#cargo;
     }
 
-    set titulo(novoTitulo) {
-        this.#titulo = novoTitulo;
-    }
-
-    get descricao() {
-        return this.#descricao;
-    }
-
-    set descricao(novaDescricao) {
-        this.#descricao = novaDescricao;
-    }
-
-    get localizacao() {
-        return this.#localizacao;
-    }
-
-    set localizacao(novaLocalizacao) {
-        this.#localizacao = novaLocalizacao;
+    set cargo(novoCargo) {
+        this.#cargo = novoCargo;
     }
 
     get salario() {
@@ -56,24 +39,28 @@ export default class Vaga {
         this.#salario = novoSalario;
     }
 
+    get cidade() {
+        return this.#cidade;
+    }
+
+    set cidade(novaCidade) {
+        this.#cidade = novaCidade;
+    }
+
+    
     toJSON() {
         return {
             codigo: this.#codigo,
-            titulo: this.#titulo,
-            descricao: this.#descricao,
-            localizacao: this.#localizacao,
-            salario: this.#salario
+            cargo: this.#cargo,
+            salario: this.#salario,
+            cidade: this.#cidade
         };
     }
 
+   
     async gravar() {
         const vagaDAO = new VagaDAO();
         await vagaDAO.gravar(this);
-    }
-
-    async atualizar() {
-        const vagaDAO = new VagaDAO();
-        await vagaDAO.atualizar(this);
     }
 
     async excluir() {
@@ -81,13 +68,13 @@ export default class Vaga {
         await vagaDAO.excluir(this);
     }
 
+    async atualizar() {
+        const vagaDAO = new VagaDAO();
+        await vagaDAO.atualizar(this);
+    }
+
     async consultar(parametro) {
         const vagaDAO = new VagaDAO();
         return await vagaDAO.consultar(parametro);
-    }
-
-    async obterCandidatos() {
-        const vagaDAO = new VagaDAO();
-        return await vagaDAO.obterCandidatos(this);
     }
 }

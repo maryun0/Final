@@ -1,21 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 
-import dotenv from 'dotenv';
 
 import rotaCandidato from './Rotas/rotaCandidato.js';
 import rotaVaga from './Rotas/rotaVaga.js';
 
-import { verificarAutenticacao } from './Seguranca/autenticar.js';
 
-dotenv.config();
-
-const host = process.env.HOST || '0.0.0.0';
-const porta = process.env.PORT || 4000;
 
 const app = express();
 
-
+const host =  '0.0.0.0';
+const porta =  4000;
 
 app.use(cors({
     credentials: true,
@@ -26,8 +21,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-app.use('/candidato', verificarAutenticacao, rotaCandidato);
-app.use('/vaga', verificarAutenticacao, rotaVaga);
+app.use('/candidato', rotaCandidato);
+app.use('/vaga', rotaVaga);
 
 
 app.listen(porta, host, () => {

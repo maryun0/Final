@@ -1,157 +1,103 @@
-// Persistencia/candidatoDAO.js
-import Candidato from '../Modelo/canditato.js';
-import Vaga from '../Modelo/vaga.js';
-import conectar from './conexao.js';
+import Candidato from "../Modelo/canditato.js";
+import Vaga from "../Modelo/vaga.js";
+import conectar from "./conexao.js";
 
 export default class CandidatoDAO {
-
-    async criarTabelaCandidato() {
-        const conexao = await conectar();
-        const sql = `
-            CREATE TABLE IF NOT EXISTS candidato (
-                can_codigo INT NOT NULL AUTO_INCREMENT,
-                can_nome VARCHAR(100) NOT NULL,
-                can_email VARCHAR(100) NOT NULL,
-                can_telefone VARCHAR(20),
-                CONSTRAINT pk_candidato PRIMARY KEY (can_codigo)
-            );
-        `;
-        await conexao.execute(sql);
-        global.poolConexoes.releaseConnection(conexao);
+    constructor() {
+        this.init();
     }
 
-    async criarTabelaCandidatoVaga() {
-        const conexao = await conectar();
-        const sql = `
-            CREATE TABLE IF NOT EXISTS candidato_vaga (
-                can_codigo INT NOT NULL,
-                vag_codigo INT NOT NULL,
-                CONSTRAINT pk_candidato_vaga PRIMARY KEY (can_codigo, vag_codigo),
-                CONSTRAINT fk_candidato_vaga_candidato FOREIGN KEY (can_codigo) REFERENCES candidato (can_codigo) ON DELETE CASCADE,
-                CONSTRAINT fk_candidato_vaga_vaga FOREIGN KEY (vag_codigo) REFERENCES vaga (vag_codigo) ON DELETE CASCADE
-            );
-        `;
-        await conexao.execute(sql);
-        global.poolConexoes.releaseConnection(conexao);
+    async init() {
+        try {
+            const conexao = await conectar();
+            const sql = `
+                CREATE TABLE IF NOT EXISTS candidato (
+                    cand_codigo INT NOT NULL AUTO_INCREMENT,
+                    cand_nome VARCHAR(100) NOT NULL,
+                    cand_cpf VARCHAR(14) NOT NULL,
+                    cand_idade INT NOT NULL,
+                    cand_telefone VARCHAR(15) NOT NULL,
+                    vaga_codigo INT NOT NULL,
+                    CONSTRAINT pk_candidato PRIMARY KEY (cand_codigo),
+                    CONSTRAINT fk_candidato_vaga FOREIGN KEY (vaga_codigo) REFERENCES vaga (vaga_codigo)
+                );`;
+            await conexao.execute(sql);
+            global.poolConexoes.releaseConnection(conexao);
+        } catch (e) {
+            console.log("Não foi possível iniciar o banco de dados: " + e.message);
+        }
     }
 
     async gravar(candidato) {
-        await this.criarTabelaCandidato();
-        await this.criarTabelaCandidatoVaga();
         if (candidato instanceof Candidato) {
-            const sql = "INSERT INTO candidato (can_nome, can_email, can_telefone) VALUES (?, ?, ?)";
-            const parametros = [candidato.nome, candidato.email, candidato.telefone];
+            const sql = "INSERT INTO candidato (cand_nome, cand_cpf, cand_idade, cand_telefone, vaga_codigo) VALUES (?, ?, ?, ?, ?)";
+            const parametros = [candidato.nome, candidato.cpf, candidato.idade, candidato.telefone, candidato.vaga.codigo];
             const conexao = await conectar();
-            try {
-                const retorno = await conexao.execute(sql, parametros);
-                candidato.codigo = retorno[0].insertId;
-
-      
-                if (candidato.vagas && candidato.vagas.length > 0) {
-                    for (const vaga of candidato.vagas) {
-                        const sqlAssociacao = "INSERT INTO candidato_vaga (can_codigo, vag_codigo) VALUES (?, ?)";
-                        await conexao.execute(sqlAssociacao, [candidato.codigo, vaga.codigo]);
-                    }
-                }
-            } finally {
-                global.poolConexoes.releaseConnection(conexao);
-            }
+            const retorno = await conexao.execute(sql, parametros);
+            candidato.codigo = retorno[0].insertId;
+            global.poolConexoes.releaseConnection(conexao);
         }
     }
 
     async atualizar(candidato) {
-        await this.criarTabelaCandidato();
-        await this.criarTabelaCandidatoVaga();
         if (candidato instanceof Candidato) {
-            const sql = "UPDATE candidato SET can_nome = ?, can_email = ?, can_telefone = ? WHERE can_codigo = ?";
-            const parametros = [candidato.nome, candidato.email, candidato.telefone, candidato.codigo];
+            const sql = "UPDATE candidato SET cand_nome = ?, cand_cpf = ?, cand_idade = ?, cand_telefone = ?, vaga_codigo = ? WHERE cand_codigo = ?";
+            const parametros = [candidato.nome, candidato.cpf, candidato.idade, candidato.telefone, candidato.vaga.codigo, candidato.codigo];
             const conexao = await conectar();
-            try {
-                await conexao.execute(sql, parametros);
-
-                
-                const sqlDeleteAssociacoes = "DELETE FROM candidato_vaga WHERE can_codigo = ?";
-                await conexao.execute(sqlDeleteAssociacoes, [candidato.codigo]);
-
-                if (candidato.vagas && candidato.vagas.length > 0) {
-                    for (const vaga of candidato.vagas) {
-                        const sqlAssociacao = "INSERT INTO candidato_vaga (can_codigo, vag_codigo) VALUES (?, ?)";
-                        await conexao.execute(sqlAssociacao, [candidato.codigo, vaga.codigo]);
-                    }
-                }
-            } finally {
-                global.poolConexoes.releaseConnection(conexao);
-            }
+            await conexao.execute(sql, parametros);
+            global.poolConexoes.releaseConnection(conexao);
         }
     }
 
     async excluir(candidato) {
-        await this.criarTabelaCandidato();
         if (candidato instanceof Candidato) {
-            const sql = "DELETE FROM candidato WHERE can_codigo = ?";
+            const sql = "DELETE FROM candidato WHERE cand_codigo = ?";
             const parametros = [candidato.codigo];
             const conexao = await conectar();
-            try {
-                await conexao.execute(sql, parametros);
-               
-            } finally {
-                global.poolConexoes.releaseConnection(conexao);
-            }
+            await conexao.execute(sql, parametros);
+            global.poolConexoes.releaseConnection(conexao);
         }
     }
 
-    async consultar(parametro) {
-        await this.criarTabelaCandidato();
-        await this.criarTabelaCandidatoVaga();
+    async consultar(parametroConsulta) {
         let sql = '';
         let parametros = [];
-        if (!parametro) {
-            sql = "SELECT * FROM candidato";
-            parametros = [];
-        } else if (!isNaN(parseInt(parametro))) {
-            sql = "SELECT * FROM candidato WHERE can_codigo = ?";
-            parametros = [parametro];
+        if (!isNaN(parseInt(parametroConsulta))) {
+            sql = `
+                SELECT c.*, v.vaga_cargo
+                FROM candidato c
+                INNER JOIN vaga v ON c.vaga_codigo = v.vaga_codigo
+                WHERE c.cand_codigo = ?
+                ORDER BY c.cand_nome`;
+            parametros = [parametroConsulta];
         } else {
-            sql = "SELECT * FROM candidato WHERE can_nome LIKE ?";
-            parametros = ['%' + parametro + '%'];
+            if (!parametroConsulta) {
+                parametroConsulta = '';
+            }
+            sql = `
+                SELECT c.*, v.vaga_cargo
+                FROM candidato c
+                INNER JOIN vaga v ON c.vaga_codigo = v.vaga_codigo
+                WHERE c.cand_nome LIKE ?
+                ORDER BY c.cand_nome`;
+            parametros = ['%' + parametroConsulta + '%'];
         }
         const conexao = await conectar();
-        try {
-            const [registrosCandidatos] = await conexao.execute(sql, parametros);
-            let listaCandidatos = [];
-            for (const registro of registrosCandidatos) {
-                const candidato = new Candidato(
-                    registro.can_codigo,
-                    registro.can_nome,
-                    registro.can_email,
-                    registro.can_telefone
-                );
-
-        
-                const sqlVagas = `
-                    SELECT v.*
-                    FROM vaga v
-                    INNER JOIN candidato_vaga cv ON v.vag_codigo = cv.vag_codigo
-                    WHERE cv.can_codigo = ?
-                `;
-                const [registrosVagas] = await conexao.execute(sqlVagas, [candidato.codigo]);
-                let vagas = [];
-                for (const regVaga of registrosVagas) {
-                    const vaga = new Vaga(
-                        regVaga.vag_codigo,
-                        regVaga.vag_titulo,
-                        regVaga.vag_descricao,
-                        regVaga.vag_localizacao,
-                        regVaga.vag_salario
-                    );
-                    vagas.push(vaga);
-                }
-                candidato.vagas = vagas;
-                listaCandidatos.push(candidato);
-            }
-            return listaCandidatos;
-        } finally {
-            global.poolConexoes.releaseConnection(conexao);
+        const [registros] = await conexao.execute(sql, parametros);
+        global.poolConexoes.releaseConnection(conexao);
+        let listaCandidatos = [];
+        for (const registro of registros) {
+            const vaga = new Vaga(registro.vaga_codigo, registro.vaga_cargo);
+            const candidato = new Candidato(
+                registro.cand_codigo,
+                registro.cand_nome,
+                registro.cand_cpf,
+                registro.cand_idade,
+                registro.cand_telefone,
+                vaga
+            );
+            listaCandidatos.push(candidato);
         }
+        return listaCandidatos;
     }
 }

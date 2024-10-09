@@ -1,26 +1,26 @@
-// Modelo/candidato.js
 import CandidatoDAO from "../Persistencia/candidatoDAO.js";
 import Vaga from "./vaga.js";
 
 export default class Candidato {
     #codigo;
     #nome;
-    #email;
+    #cpf;
+    #idade;
     #telefone;
-    #vagas; // Lista de vagas associadas
+    #vaga;
 
-    constructor(codigo = 0, nome = '', email = '', telefone = '', vagas = []) {
+    constructor(codigo = 0, nome = "", cpf = "", idade = 0, telefone = "", vaga = null) {
         this.#codigo = codigo;
         this.#nome = nome;
-        this.#email = email;
+        this.#cpf = cpf;
+        this.#idade = idade;
         this.#telefone = telefone;
-        this.#vagas = vagas;
+        this.#vaga = vaga;
     }
 
     get codigo() {
         return this.#codigo;
     }
-
     set codigo(novoCodigo) {
         this.#codigo = novoCodigo;
     }
@@ -28,42 +28,48 @@ export default class Candidato {
     get nome() {
         return this.#nome;
     }
-
     set nome(novoNome) {
         this.#nome = novoNome;
     }
 
-    get email() {
-        return this.#email;
+    get cpf() {
+        return this.#cpf;
+    }
+    set cpf(novoCpf) {
+        this.#cpf = novoCpf;
     }
 
-    set email(novoEmail) {
-        this.#email = novoEmail;
+    get idade() {
+        return this.#idade;
+    }
+    set idade(novaIdade) {
+        this.#idade = novaIdade;
     }
 
     get telefone() {
         return this.#telefone;
     }
-
     set telefone(novoTelefone) {
         this.#telefone = novoTelefone;
     }
 
-    get vagas() {
-        return this.#vagas;
+    get vaga() {
+        return this.#vaga;
     }
-
-    set vagas(novasVagas) {
-        this.#vagas = novasVagas;
+    set vaga(novaVaga) {
+        if (novaVaga instanceof Vaga) {
+            this.#vaga = novaVaga;
+        }
     }
 
     toJSON() {
         return {
             codigo: this.#codigo,
             nome: this.#nome,
-            email: this.#email,
+            cpf: this.#cpf,
+            idade: this.#idade,
             telefone: this.#telefone,
-            vagas: this.#vagas.map(v => v.toJSON())
+            vaga: this.#vaga ? this.#vaga.toJSON() : null
         };
     }
 
@@ -72,18 +78,18 @@ export default class Candidato {
         await candidatoDAO.gravar(this);
     }
 
-    async atualizar() {
-        const candidatoDAO = new CandidatoDAO();
-        await candidatoDAO.atualizar(this);
-    }
-
     async excluir() {
         const candidatoDAO = new CandidatoDAO();
         await candidatoDAO.excluir(this);
     }
 
-    async consultar(parametro) {
+    async alterar() {
         const candidatoDAO = new CandidatoDAO();
-        return await candidatoDAO.consultar(parametro);
+        await candidatoDAO.atualizar(this);
+    }
+
+    async consultar(termo) {
+        const candidatoDAO = new CandidatoDAO();
+        return await candidatoDAO.consultar(termo);
     }
 }
